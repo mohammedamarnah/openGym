@@ -11,7 +11,7 @@ import { backoffStepOf, applyBackoff } from './backoff.js'
 import { dbLoadFor, historyAs, ownedWeightsFor, withMeaning } from './dumbbells.js'
 import { isAssisted } from './exercises.js'
 import { sessionHistory } from './backfill.js'
-import { programmeSlot, pctWeight } from './programmes.js'
+import { programmeSlot, programmeExercises, pctWeight } from './programmes.js'
 import { todayISO } from './format.js'
 import { exConverted, exView, viewTarget, storedTarget, storedRow } from './ex-unit.js'
 import { warmupSource, warmupModeOf, withWarmupBlock } from './warmup-ramp.js'
@@ -97,7 +97,7 @@ export function buildPlannedEntry(stored, cfg, routine, opts) {
   return inExUnit(stored, cfg, (st, c) => planEntry(st, c, routine, opts))
 }
 
-function planEntry(stored, cfg, routine, { noProg = false } = {}) {
+function planEntry(stored, { wk, ...cfg }, routine, { noProg = false } = {}) {
   // What a dumbbell weight means for this exercise today (lib/dumbbells.js): the history it
   // progresses from is read in that meaning, so a switch from "40 total" to per bell opens at
   // 20, not at 40 a hand. Only a switch between the two explicit meanings converts anything.
@@ -112,7 +112,7 @@ function planEntry(stored, cfg, routine, { noProg = false } = {}) {
   // A running programme's target for this exercise this week (lib/programmes.js) replaces the
   // policy's prescription: the weight from the %1RM, the reps from the routine, so neither the
   // policy nor "Your last session" moves numbers the programme set.
-  const slot = noProg ? null : programmeSlot(stored, routine?.id, cfg.id, stored?.active?.d || todayISO())
+  const slot = noProg ? null : programmeSlot(stored, routine?.id, cfg.id, stored?.active?.d || todayISO(), wk)
   const policyKind = plan.kind
   if (slot) plan = programmePlan(st, cfg, plan, slot, step)
   const planReps = !startsFromLast(st) || plan.kind === 'programme'
@@ -271,7 +271,7 @@ export function buildSessionEntries(st, r) {
   // The prescription is applied as the session is built, so you walk up to the bar with the
   // right weight already on the screen instead of being told about it afterwards.
   const noProg = r?.excludeFromProgression === true
-  return (r ? r.ex : []).map(cfg => {
+  return programmeExercises(st, r, st?.active?.d || todayISO()).map(cfg => {
     const { deload, ...built } = buildPlannedEntry(st, cfg, r, { noProg })
     // A programme's deload week stays out of progression, as a deload routine does.
     return { id: cfg.id, sg: cfg.sg, ...built, ...(noProg || deload ? { noProg: true } : {}) }

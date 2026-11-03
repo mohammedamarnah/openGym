@@ -51,8 +51,8 @@ const block = (extra = {}) => ({
 })
 
 describe('the programme model', () => {
-  it('keeps 1 to 16 weeks and only targets that mean something', () => {
-    const p = normalizeProgramme({ id: 'x', name: '  Block ', weeks: [{ rpe: 3, t: { a: { pct: 500 }, b: { pct: 72.3, rpe: 8.2 } } }, ...Array(20).fill({})] })
+  it('keeps 1 to MAX_WEEKS weeks and only targets that mean something', () => {
+    const p = normalizeProgramme({ id: 'x', name: '  Block ', weeks: [{ rpe: 3, t: { a: { pct: 500 }, b: { pct: 72.3, rpe: 8.2 } } }, ...Array(MAX_WEEKS + 4).fill({})] })
     expect(p.name).toBe('Block')
     expect(p.weeks).toHaveLength(MAX_WEEKS)
     expect(p.weeks[0]).toEqual({ t: { b: { pct: 72.5, rpe: 8 } } })
@@ -311,6 +311,38 @@ describe.each(CLOCKS)('a session in a running programme (session-start.js), %s',
 
 // The week count is calendar arithmetic on local dates: weekKey (format.js) takes noon, so a 23 or
 // 25-hour day never moves a date, and the day difference is rounded to whole days.
+describe('a week with its own exercise list (Week.r)', () => {
+  const weekly = () => {
+    const s = state({ workouts: [logged('2026-01-05', BENCH, 100, 5, 'A')] })
+    s.routines[0].ex[0].restSec = 150
+    saveProgramme(s, block({ weeks: [
+      { r: { A: [{ id: BENCH, sets: 5, reps: 5 }] } },
+      { r: { A: [{ id: BENCH, sets: 3, pyramid: [5, 3, 'max'], wk: { pcts: [70, 80, 90] } }, { id: SQUAT, sets: 2, reps: 10 }] } },
+    ] }))
+    return s
+  }
+
+  it('trains each week at its own sets and reps, keeping the routine\'s settings', () => {
+    const s = weekly()
+    startProgramme(s, 'P', '2026-10-21')
+    const [bench, ...rest] = buildSessionEntries(s, s.routines[0])
+    expect(rest).toEqual([])
+    expect(work(bench).map(x => x.r)).toEqual([5, 5, 5, 5, 5])
+    expect(bench.target.restSec).toBe(150)
+    startProgramme(s, 'P', daysBefore('2026-10-21', 7))
+    const [bench2, squat2] = buildSessionEntries(s, s.routines[0])
+    expect(work(squat2).map(x => x.r)).toEqual([10, 10])
+    expect(work(bench2).map(x => x.r).slice(0, 2)).toEqual([5, 3])
+  })
+
+  it('gives each set of a percentage pyramid its own weight', () => {
+    const s = weekly()
+    startProgramme(s, 'P', daysBefore('2026-10-21', 7))
+    const [bench] = buildSessionEntries(s, s.routines[0])
+    expect(work(bench).map(x => x.w)).toEqual([82.5, 92.5, 105])
+  })
+})
+
 describe('week boundaries across the clock changes', () => {
   const run = (startedOn, weekStart = 1) => {
     const s = state({ weekStart, programmes: { P: { id: 'P', at: 1, days: { 1: ['A'] }, weeks: Array(8).fill({}) } } })

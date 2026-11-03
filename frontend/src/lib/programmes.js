@@ -5,7 +5,14 @@
 //   S.programme  = null | Run                       the one that is running, a plain setting
 //
 //   Programme = { id, name, at, weeks: Week[], days?: { [getDay()]: rid[] }, sequence?: (rid|'rest')[], src? }
-//   Week      = { deload?: true, rpe?: number, t?: { [exId | 'rid:exId']: { pct?: number, rpe?: number } } }
+//   Week      = { deload?: true, rpe?: number, t?: { [exId | 'rid:exId']: { pct?: number, rpe?: number } },
+//                 r?: { [rid]: DayItem[] } }
+//   DayItem   = { id, sets, reps?, repsMin?, sec?, mode?: 'time', pyramid?, lastToFailure?, sg?, note?,
+//                 restSec?, wk?: { pct?, rpe?, pcts? } }
+//
+// A week's `r` replaces a routine's exercises for that week: the exact sets and reps a
+// published programme prescribes week by week. Each item keeps the routine's own settings for
+// the same exercise (rest, progression, warm-ups) and overrides only the prescription.
 //   Run       = { id, startedOn: iso, pausedOn?: iso, cycle: 1, bump: 0, saved: { week, scheduleMode, rotation, pass } }
 //
 // THE SCHEDULE IS APPLIED, NOT RESOLVED. A programme holds a schedule of its own: weekdays
@@ -34,8 +41,10 @@ import { queueOf } from './queue.js'
 import { REST, saveRotation, startPass, stopPass, chooseFixedWeek } from './rotation.js'
 import { best1RM } from './onerm.js'
 import { t } from './i18n-core.js'
+import { normalizePyramid } from './pyramid.js'
+import { defaultIncrement } from './exercises.js'
 
-export const MAX_WEEKS = 16
+export const MAX_WEEKS = 52
 export const PCT_MIN = 30
 export const PCT_MAX = 110
 export const RPE_MIN = 6
@@ -85,6 +94,42 @@ export function cleanWeek(w) {
       if (c && k && k !== '__proto__') t[k] = c
     }
     if (Object.keys(t).length) out.t = t
+  }
+  const r = cleanDayPlans(w.r)
+  if (Object.keys(r).length) out.r = r
+  return out
+}
+
+const posInt = (v, max = 999) => {
+  const n = Math.round(num(v))
+  return n >= 1 ? Math.min(max, n) : null
+}
+
+function cleanItem(x) {
+  if (!isMap(x) || typeof x.id !== 'string' || !x.id) return null
+  const o = { id: x.id, sets: posInt(x.sets, 20) || 1 }
+  for (const k of ['reps', 'repsMin', 'sec', 'restSec']) { const n = posInt(x[k], 3600); if (n) o[k] = n }
+  if (x.mode === 'time') o.mode = 'time'
+  const pyramid = normalizePyramid(x.pyramid)
+  if (pyramid.length) o.pyramid = pyramid
+  if (x.lastToFailure === true) o.lastToFailure = true
+  if (typeof x.sg === 'string' && x.sg) o.sg = x.sg
+  if (typeof x.note === 'string' && x.note.trim()) o.note = x.note.trim().slice(0, 500)
+  if (isMap(x.wk)) {
+    const pct = cleanPct(x.wk.pct), rpe = cleanRpe(x.wk.rpe)
+    const pcts = Array.isArray(x.wk.pcts) ? x.wk.pcts.map(cleanPct) : []
+    const wk = { ...(pct != null ? { pct } : {}), ...(rpe != null ? { rpe } : {}), ...(pcts.length && pcts.every(v => v != null) ? { pcts } : {}) }
+    if (Object.keys(wk).length) o.wk = wk
+  }
+  return o
+}
+
+function cleanDayPlans(r) {
+  const out = {}
+  if (!isMap(r)) return out
+  for (const [rid, items] of Object.entries(r)) {
+    if (!rid || rid === '__proto__' || !Array.isArray(items)) continue
+    out[rid] = items.map(cleanItem).filter(Boolean)
   }
   return out
 }
@@ -316,12 +361,12 @@ export function programmeChip(S, today = todayISO()) {
  * weeks, name, bump }`, or null when no running programme speaks to it (paused, done, a routine it
  * does not schedule, a week with nothing for it).
  */
-export function programmeSlot(S, rid, exId, iso = todayISO()) {
+export function programmeSlot(S, rid, exId, iso = todayISO(), dayTarget = null) {
   const st = programmeStatus(S, iso)
   if (!st || !st.current || !rid) return null
   if (!programmeRoutineIds(S, st.programme).includes(rid)) return null
   const w = st.current
-  const own = w.t?.[`${rid}:${exId}`] || w.t?.[exId] || {}
+  const own = dayTarget || w.t?.[`${rid}:${exId}`] || w.t?.[exId] || {}
   const pct = own.pct != null ? own.pct : null
   const rpe = own.rpe != null ? own.rpe : w.rpe != null ? w.rpe : null
   const deload = w.deload === true
@@ -332,6 +377,41 @@ export function programmeSlot(S, rid, exId, iso = todayISO()) {
     ...(rpe != null ? { rpe } : {}),
     deload, week: st.week, weeks: st.weeks, name: st.programme.name, bump,
   }
+}
+
+/** This week's own exercise list for routine `r` (Week.r), or null when the week has none. */
+export function programmeDayPlan(S, rid, iso = todayISO()) {
+  const st = programmeStatus(S, iso)
+  if (!st || !st.current || !rid) return null
+  if (!programmeRoutineIds(S, st.programme).includes(rid)) return null
+  const items = st.current.r?.[rid]
+  return Array.isArray(items) && items.length ? items : null
+}
+
+const PRESCRIPTION_KEYS = ['sets', 'reps', 'repsMin', 'repsMax', 'setsMax', 'sec', 'mode', 'pyramid', 'pyramidRest',
+  'pyramidWeight', 'lastToFailure', 'backoff', 'intensifier', 'sg', 'sgName', 'sgRest', 'note']
+
+/**
+ * The exercises routine `r` trains on `iso`: this week's list when the running programme has one,
+ * each item on top of the routine's own settings for that exercise, else the routine's own.
+ */
+export function programmeExercises(S, r, iso = todayISO()) {
+  const items = programmeDayPlan(S, r?.id, iso)
+  if (!items) return r ? r.ex : []
+  const pool = [...(r.ex || [])]
+  return items.map(item => {
+    const at = pool.findIndex(e => e.id === item.id)
+    const base = at >= 0 ? pool.splice(at, 1)[0] : (r.ex || []).find(e => e.id === item.id) || {}
+    const own = Object.fromEntries(Object.entries(base).filter(([k]) => !PRESCRIPTION_KEYS.includes(k)))
+    const { wk, ...prescription } = item
+    const out = { ...own, ...prescription, ...(wk ? { wk } : {}) }
+    if (wk?.pcts && prescription.pyramid) {
+      const step = base.inc > 0 ? base.inc : defaultIncrement(item.id, S?.unit)
+      const weights = wk.pcts.map(p => pctWeight(S, item.id, p, { step }))
+      if (weights.every(w => w > 0)) out.pyramidWeight = weights
+    }
+    return out
+  })
 }
 
 const round1 = v => Math.round(v * 10) / 10
@@ -391,10 +471,19 @@ export function importedProgramme(p, ridMap, exMap = {}, now = Date.now()) {
     return r ? `${r}:${own(exMap, k.slice(i + 1)) || k.slice(i + 1)}` : null
   }
   const weeks = n.weeks.map(w => {
-    if (!w.t) return w
-    const t = {}
-    for (const [k, v] of Object.entries(w.t).slice(0, IMPORT_MAX_TARGETS)) { const nk = key(k); if (nk) t[nk] = v }
-    return { ...w, t }
+    const out = { ...w }
+    if (w.t) {
+      out.t = {}
+      for (const [k, v] of Object.entries(w.t).slice(0, IMPORT_MAX_TARGETS)) { const nk = key(k); if (nk) out.t[nk] = v }
+    }
+    if (w.r) {
+      out.r = {}
+      for (const [k, items] of Object.entries(w.r)) {
+        const r = own(ridMap, k)
+        if (r) out.r[r] = items.map(item => ({ ...item, id: own(exMap, item.id) || item.id }))
+      }
+    }
+    return out
   })
   const out = { ...n, id: uid(), at: now, weeks }
   if (n.sequence) {

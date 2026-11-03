@@ -37,6 +37,7 @@ export function weekSummary(w, S) {
   const parts = []
   if (c.deload) parts.push(t('Deload week'))
   if (c.rpe != null) parts.push(rpeText(c.rpe, S))
+  if (c.r) parts.push(t('Own sets and reps'))
   const n = Object.values(c.t || {}).filter(x => x.pct != null).length
   if (n) parts.push(tn('{0} lift at a %1RM', '{0} lifts at a %1RM', n))
   return parts.length ? parts.join(' · ') : t('Nothing set, progression as usual')
@@ -142,6 +143,9 @@ export default function Programmes() {
         </EmptyState>}
     </Section>
     {list.length > 0 && <Button variant="tinted" icon="plus" onClick={create}>{t('New programme')}</Button>}
+    <Section title={t('Program library')} footer={t('Thousands of published programs, week by week. Swap any exercise before you add one.')}>
+      <Row icon="magnifier" title={t('Browse programs')} accessory="chevron" onClick={() => nav('/plan/library')} />
+    </Section>
     <Section title={t('Starter programmes')} footer={t('Each adds its own routines, so your plan stays as it is until you start it.')}>
       {starterProgrammeOptions().map(o => {
         const c = STARTER_COPY[o.id]()

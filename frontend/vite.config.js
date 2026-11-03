@@ -36,6 +36,21 @@ const catalogueMedia = {
   }
 }
 
+const programLibrary = {
+  name: 'opengym-program-library',
+  configureServer(server) {
+    const root = resolve(fileURLToPath(new URL('.', import.meta.url)), '../programs')
+    server.middlewares.use((req, res, next) => {
+      if (!req.url.startsWith('/programs/')) return next()
+      const name = decodeURIComponent(req.url.slice('/programs/'.length).split('?')[0])
+      const file = join(root, name)
+      if (!/^(index|p\/[\w.-]+)\.json$/.test(name) || !existsSync(file)) { res.statusCode = 404; return res.end() }
+      res.setHeader('Content-Type', 'application/json')
+      res.end(readFileSync(file))
+    })
+  }
+}
+
 // Optional web analytics (Umami). Injected only when BOTH vars are set at build time,
 // so a plain `npm run build` — and every self-hosted install — stays telemetry-free.
 // Set for the public instance: VITE_UMAMI_SRC=https://stats.example/script.js VITE_UMAMI_ID=<uuid>
@@ -105,7 +120,7 @@ const appVersion = process.env.APP_BUILD ? `${pkgVersion}+${process.env.APP_BUIL
 
 export default defineConfig({
   define: { __APP_VERSION__: JSON.stringify(appVersion) },
-  plugins: [react(), umami, flavor, swStamp, catalogueMedia],
+  plugins: [react(), umami, flavor, swStamp, catalogueMedia, programLibrary],
   base: './',
   server: {
     // The Coach's core (payload, validator, prompts, HTTP adapters) lives in ../api/coach/core

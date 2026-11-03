@@ -22,6 +22,7 @@ want. Run them from the repository root with Node 22 unless noted.
 | Script | When |
 |---|---|
 | `build-hevy-id-map.mjs` | Regenerates `frontend/src/lib/hevy-id-map.js` after Hevy adds templates (needs a Hevy API key) |
+| `boostcamp/fetch.mjs` | Downloads the Boostcamp program library into `programs/` (the app's Program library). Rerun it to refresh; `--offline` rebuilds from `.cache/boostcamp/` |
 | `de-name-rules.mjs` | The German exercise-name rules. `frontend/src/lib/exercise-names.test.js` holds every German name to them |
 | `catalogue/migration-check.mjs` | Before a catalogue change ships: compares old and new catalogue on copies of real profiles |
 
