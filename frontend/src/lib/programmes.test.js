@@ -161,6 +161,19 @@ describe('running a programme', () => {
     expect(programmeStatus(s, '2026-11-16').week).toBe(3)
   })
 
+  it('a library programme moves a week once each session is done, and a pause keeps the count', () => {
+    const s = state()
+    saveProgramme(s, block({ src: 'library:x' }))
+    startProgramme(s, 'P', '2026-10-19')
+    s.workouts.push(logged('2026-10-19', BENCH, 100, 5, 'A'))
+    expect(programmeStatus(s, '2026-11-10')).toMatchObject({ week: 1, day: 2 })
+    s.workouts.push(logged('2026-11-10', SQUAT, 100, 5, 'B'))
+    pauseProgramme(s, '2026-11-11')
+    s.workouts.push(logged('2026-11-12', BENCH, 100, 5, 'A'))
+    resumeProgramme(s, '2026-11-20')
+    expect(programmeStatus(s, '2026-11-20')).toMatchObject({ week: 2, day: 1, paused: false })
+  })
+
   it('repeats from week 1 with a heavier %1RM, keeping your old plan to go back to', () => {
     const s = state()
     saveProgramme(s, block())
@@ -281,6 +294,15 @@ describe.each(CLOCKS)('a session in a running programme (session-start.js), %s',
     expect(work(squat).map(x => x.w)).toEqual(work(buildSessionEntries({ ...s, programme: null }, routine(s, 'A'))[1]).map(x => x.w))
     expect(squat.plan.prog).toEqual({ week: 1, weeks: 3, rpe: 7 })
     expect(bench.noProg).toBeUndefined()
+  })
+
+  it('a library programme\'s RPE sets the weight for the routine\'s reps', () => {
+    const s = withHistory()
+    s.programmes.P.src = 'library:x'
+    startProgramme(s, 'P', now())
+    const [, squat] = buildSessionEntries(s, routine(s, 'A'))
+    expect(work(squat).map(x => x.w)).toEqual([110, 110, 110])   // 140 kg 1RM, 5 reps at RPE 7: 78.6%
+    expect(squat.plan.why[0]).toBe('Week {0} of {1}: weight from your best 1RM')
   })
 
   it('"Your last session" does not move a programme\'s reps', () => {

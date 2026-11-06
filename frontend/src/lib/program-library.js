@@ -38,6 +38,7 @@ export function slotOf(id, ex) {
   const pcts = sets.map(s => cleanPct(s.pct))
   const wk = {}
   if (rpes.length) wk.rpe = Math.max(...rpes)
+  if (rpes.length === n && !same(rpes)) wk.rpes = rpes
   if (sets.length && sets.every(s => s.sec > 0)) {
     out.mode = 'time'
     out.sec = Math.max(...sets.map(s => s.sec))
@@ -45,12 +46,13 @@ export function slotOf(id, ex) {
     const reps = sets.map(repsOf)
     const ranged = sets.every(s => s.lo > 0 && s.hi > s.lo && !s.r)
     const varyPct = pcts.some(p => p != null) && !same(pcts)
-    if (ranged && same(sets.map(s => s.lo)) && same(sets.map(s => s.hi)) && !varyPct) {
+    const varyLoad = varyPct || (rpes.length === n && !same(rpes))
+    if (ranged && same(sets.map(s => s.lo)) && same(sets.map(s => s.hi)) && !varyLoad) {
       out.reps = sets[0].hi
       out.repsMin = sets[0].lo
-    } else if (same(reps) && reps[0] !== PYRAMID_MAX && !varyPct) {
+    } else if (same(reps) && reps[0] !== PYRAMID_MAX && !varyLoad) {
       out.reps = reps[0] ?? 10
-    } else if (n > 1 && same(reps.slice(0, -1)) && reps[n - 1] === PYRAMID_MAX && reps[0] !== PYRAMID_MAX && !varyPct) {
+    } else if (n > 1 && same(reps.slice(0, -1)) && reps[n - 1] === PYRAMID_MAX && reps[0] !== PYRAMID_MAX && !varyLoad) {
       out.reps = reps[0] ?? 10
       out.lastToFailure = true
     } else if (n <= MAX_PYRAMID_SETS) {

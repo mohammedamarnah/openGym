@@ -55,6 +55,9 @@ const RIR_PCT = [
   71.7, 69.5, 67.5, 65.5, 63.6,
 ]
 
+/** The %1RM a set of `effectiveReps` (reps plus reps in reserve) is done at, or null past 15. */
+export const pctOfMax = effectiveReps => RIR_PCT[Math.round(effectiveReps) - 1] ?? null
+
 function rirEstimate(w, effectiveReps) {
   const idx = Math.min(Math.max(Math.round(effectiveReps) - 1, 0), RIR_PCT.length - 1)
   return (w * 100) / RIR_PCT[idx]

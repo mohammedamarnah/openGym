@@ -11,7 +11,7 @@ import { backoffStepOf, applyBackoff } from './backoff.js'
 import { dbLoadFor, historyAs, ownedWeightsFor, withMeaning } from './dumbbells.js'
 import { isAssisted } from './exercises.js'
 import { sessionHistory } from './backfill.js'
-import { programmeSlot, programmeExercises, pctWeight } from './programmes.js'
+import { programmeSlot, programmeExercises, pctWeight, rpeWeight } from './programmes.js'
 import { todayISO } from './format.js'
 import { exConverted, exView, viewTarget, storedTarget, storedRow } from './ex-unit.js'
 import { warmupSource, warmupModeOf, withWarmupBlock } from './warmup-ramp.js'
@@ -181,23 +181,28 @@ function inExUnit(stored, cfg, build) {
  * The prescription a programme's target makes of the policy's (buildPlannedEntry). A %1RM with an
  * estimate to take it from sets the weight; without one (a first session, a body-weight lift) the
  * policy's weight stands. A deload week without a %1RM takes the policy's weight down by the
- * deload factor. The reps and sets are left to the routine, the RPE rides along to be shown.
+ * deload factor. The reps and sets are left to the routine, the RPE rides along to be shown. A
+ * library programme's RPE sets the weight too (rpeWeight, for the top of the rep range).
  */
 export function programmePlan(st, cfg, plan, slot, step) {
   const reps = modeOf(cfg) === 'reps' && !isBw(cfg) && !isAssisted(cfg)
   const owned = reps ? ownedWeightsFor(st, cfg) : null
   let weight = reps && slot.pct != null ? pctWeight(st, cfg.id, slot.pct, { step, owned, floor: barFloor(st, cfg.id) }) : null
+  const fromRpe = weight == null && reps && slot.rpeLoad && slot.rpe != null && cfg.reps > 0 && !cfg.pyramid
+    ? rpeWeight(st, cfg.id, cfg.reps, slot.rpe, { step, owned, floor: barFloor(st, cfg.id) }) : null
+  if (fromRpe != null) weight = fromRpe
   if (weight == null && slot.deload && reps) {
     const base = plan.weight ?? cfg.weight
     if (base > 0) weight = deloadTo(base, step, DELOAD_FACTOR)
   }
-  const why = [slot.pct != null && weight != null ? 'Week {0} of {1}: {2}% of your best 1RM' : slot.deload ? 'Week {0} of {1}: deload week' : 'Week {0} of {1}',
+  const why = [slot.pct != null && weight != null ? 'Week {0} of {1}: {2}% of your best 1RM'
+    : fromRpe != null ? 'Week {0} of {1}: weight from your best 1RM' : slot.deload ? 'Week {0} of {1}: deload week' : 'Week {0} of {1}',
     slot.week, slot.weeks, slot.pct]
   return {
     policy: plan.policy, kind: 'programme', why,
     // Without a weight of its own the policy's stands, so the weight still moves as it would have.
     ...(weight != null ? { weight } : plan.weight != null ? { weight: plan.weight } : {}),
-    prog: { week: slot.week, weeks: slot.weeks, ...(slot.pct != null ? { pct: slot.pct } : {}), ...(slot.rpe != null ? { rpe: slot.rpe } : {}), ...(slot.deload ? { deload: true } : {}) },
+    prog: { week: slot.week, weeks: slot.weeks, ...(slot.pct != null ? { pct: slot.pct } : {}), ...(slot.rpe != null ? { rpe: slot.rpe } : {}), ...(slot.rpes ? { rpes: slot.rpes } : {}), ...(slot.deload ? { deload: true } : {}) },
   }
 }
 

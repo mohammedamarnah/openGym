@@ -21,6 +21,11 @@ describe('a program exercise as a routine slot', () => {
     expect(slot).toEqual({ id: BENCH, sets: 3, pyramid: [5, 5, 'max'], wk: { pcts: [65, 75, 85] } })
   })
 
+  it('reads changing RPEs as a pyramid with an RPE per set', () => {
+    expect(slotOf(BENCH, { n: 'x', sets: [{ r: 5, rpe: 7 }, { r: 5, rpe: 8 }, { r: 5, rpe: 9 }] }))
+      .toEqual({ id: BENCH, sets: 3, pyramid: [5, 5, 5], wk: { rpe: 9, rpes: [7, 8, 9] } })
+  })
+
   it('keeps a rep range as a range', () => {
     expect(slotOf(BENCH, { n: 'x', sets: [{ lo: 8, hi: 12, rpe: 8, x: 3 }], rest: 90 }))
       .toEqual({ id: BENCH, sets: 3, reps: 12, repsMin: 8, wk: { rpe: 8 }, restSec: 90 })
