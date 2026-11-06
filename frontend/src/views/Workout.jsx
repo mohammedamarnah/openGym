@@ -279,6 +279,19 @@ function ExerciseBlock({ entryIdx, compact, dense, editing, onToggle, onToggleSi
   // the session was built so the reason matches the numbers already in the rows.
   const plan = entry.plan
   const guidance = progressionGuidance(plan)
+  const effortText = (lo, hi = lo) => {
+    const [a, b] = [rpeAs(lo, effortOf(S)), rpeAs(hi, effortOf(S))]
+    const [from, to] = [Math.min(a.v, b.v), Math.max(a.v, b.v)]
+    return `${a.k} ${fmtNum(from)}${to !== from ? `–${fmtNum(to)}` : ''}`
+  }
+  const aimRpes = plan?.prog?.rpes || []
+  const aimText = aimRpes.length ? effortText(Math.min(...aimRpes), Math.max(...aimRpes))
+    : plan?.prog?.rpe != null ? effortText(plan.prog.rpe) : null
+  const aimAt = i => {
+    if (plan?.prog?.rpe == null || isWarmupRow(entry.sets[i])) return null
+    const k = entry.sets.slice(0, i).filter(x => !isWarmupRow(x)).length
+    return aimRpes[k] ?? plan.prog.rpe
+  }
   // The plan this exercise was built from (issue #275), on one quiet line in every view — the
   // routine's "2 × 10" is the thing the rows are measured against. When today's rows open
   // somewhere else, the same line says so: progression moved the sets or reps (a bodyweight
@@ -623,6 +636,10 @@ function ExerciseBlock({ entryIdx, compact, dense, editing, onToggle, onToggleSi
       if (fresh && !fresh.done) onToggle(i)
     }
     const open = () => effortPickerSheet(col.eff, v, pickEffort)
+    const aim = v == null ? aimAt(i) : null
+    if (aim != null) return (
+      <button className="effcell is-empty" aria-label={t('aim for {0}', effortText(aim))} onClick={open}>{effortText(aim)}</button>
+    )
     if (v == null) return (
       <button className="effcell is-empty" aria-label={col.hd} onClick={open}>{col.hd}</button>
     )
@@ -823,7 +840,7 @@ function ExerciseBlock({ entryIdx, compact, dense, editing, onToggle, onToggleSi
     {guidance && onProgressionSettings && <button type="button" className={'progline' + (plan.kind === 'deload' ? ' warn' : '')}
       aria-label={t('Open exercise settings')} onClick={onProgressionSettings}>
       <Icon name={plan.kind === 'up' ? 'arrowUp' : plan.kind === 'deload' || plan.prog?.deload ? 'arrowDown' : plan.kind === 'programme' ? 'calendar' : 'lightbulb'} />
-      <span><strong>{t(guidance.policyLabel)}</strong> · {t(...guidance.why)}{guidance.prog?.rpe != null && <> · {t('aim for {0}', (r => `${r.k} ${fmtNum(r.v)}`)(rpeAs(guidance.prog.rpe, effortOf(S))))}</>}</span>
+      <span><strong>{t(guidance.policyLabel)}</strong> · {t(...guidance.why)}{aimText && <> · {t('aim for {0}', aimText)}</>}</span>
     </button>}
     </>}
     <div className="card" style={{ marginTop: 10, marginBottom: 0 }}>

@@ -8,12 +8,12 @@
 //   Week      = { deload?: true, rpe?: number, t?: { [exId | 'rid:exId']: { pct?: number, rpe?: number } },
 //                 r?: { [rid]: DayItem[] } }
 //   DayItem   = { id, sets, reps?, repsMin?, sec?, mode?: 'time', pyramid?, lastToFailure?, sg?, note?,
-//                 restSec?, wk?: { pct?, rpe?, pcts? } }
+//                 restSec?, wk?: { pct?, rpe?, pcts?, rpes? } }
 //
 // A week's `r` replaces a routine's exercises for that week: the exact sets and reps a
 // published programme prescribes week by week. Each item keeps the routine's own settings for
 // the same exercise (rest, progression, warm-ups) and overrides only the prescription.
-//   Run       = { id, startedOn: iso, pausedOn?: iso, cycle: 1, bump: 0, saved: { week, scheduleMode, rotation, pass } }
+//   Run       = { id, startedOn: iso, pausedOn?: iso, cycle: 1, bump: 0, done?: number, saved: { week, scheduleMode, rotation, pass } }
 //
 // THE SCHEDULE IS APPLIED, NOT RESOLVED. A programme holds a schedule of its own: weekdays
 // (`days`) or a loop (`sequence`, lib/rotation.js), taken from your plan when you make it. Starting
@@ -23,9 +23,15 @@
 // read the same S.week and S.queue as always. One schedule for every week of the block; what the
 // weeks change is the intensity.
 //
-// THE WEEK IS THE CALENDAR WEEK. Week 1 is the calendar week (the profile's week start) the
-// programme was started in, week 2 the next one, and so on, for a loop as for weekdays: a missed
-// session does not hold the block up, a pause does (`pausedOn`; resuming moves the start on by the
+// A LIBRARY PROGRAMME MOVES BY SESSIONS. A programme from the program library (src "library:...")
+// goes to week 2 after you have done each scheduled session of week 1 once, as the published
+// programme counts it: a missed day holds the block up. Pausing keeps the count (Run.done holds the
+// sessions done before the pause). Its RPE targets also set the weight: the weight the best
+// estimated 1RM gives for the reps at that RPE (rpeWeight).
+//
+// THE WEEK IS THE CALENDAR WEEK for every other programme. Week 1 is the calendar week (the
+// profile's week start) the programme was started in, week 2 the next one, and so on, for a loop
+// as for weekdays: a missed session does not hold the block up, a pause does (`pausedOn`; resuming moves the start on by the
 // whole weeks it was paused). Past the last week the programme is done: its targets stop, the
 // schedule stays until you choose to run it again or go back to your plan.
 //
@@ -39,7 +45,7 @@
 import { isoOf, todayISO, uid, weekKey, MONDAY, SUNDAY } from './format.js'
 import { queueOf } from './queue.js'
 import { REST, saveRotation, startPass, stopPass, chooseFixedWeek } from './rotation.js'
-import { best1RM } from './onerm.js'
+import { best1RM, pctOfMax } from './onerm.js'
 import { t } from './i18n-core.js'
 import { normalizePyramid } from './pyramid.js'
 import { defaultIncrement } from './exercises.js'
@@ -118,7 +124,9 @@ function cleanItem(x) {
   if (isMap(x.wk)) {
     const pct = cleanPct(x.wk.pct), rpe = cleanRpe(x.wk.rpe)
     const pcts = Array.isArray(x.wk.pcts) ? x.wk.pcts.map(cleanPct) : []
-    const wk = { ...(pct != null ? { pct } : {}), ...(rpe != null ? { rpe } : {}), ...(pcts.length && pcts.every(v => v != null) ? { pcts } : {}) }
+    const rpes = Array.isArray(x.wk.rpes) ? x.wk.rpes.map(cleanRpe) : []
+    const wk = { ...(pct != null ? { pct } : {}), ...(rpe != null ? { rpe } : {}), ...(pcts.length && pcts.every(v => v != null) ? { pcts } : {}),
+      ...(rpes.length && rpes.every(v => v != null) ? { rpes } : {}) }
     if (Object.keys(wk).length) o.wk = wk
   }
   return o
@@ -159,6 +167,9 @@ export function normalizeProgramme(p) {
   else { delete out.sequence; out.days = cleanDays(p.days) }
   return out
 }
+
+/** A programme added from the program library: it moves by sessions and its RPEs set the weight. */
+export const isLibraryProgramme = p => typeof p?.src === 'string' && p.src.startsWith('library:')
 
 /** Every programme, newest first; the malformed ones are left out. */
 export const programmesOf = S => Object.values(isMap(S?.programmes) ? S.programmes : {})
@@ -233,6 +244,32 @@ const weeksBetween = (a, b, ws) => Math.round(daysBetween(weekKey(a, ws), weekKe
 const addDays = (iso, n) => { const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + n); return isoOf(d) }
 const isISO = v => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)
 
+const routineIdsOf = w => [...new Set([].concat(w?.routineIds ?? (w?.routineId ? [w.routineId] : [])))]
+
+/** The sessions a programme schedules in one week: its weekday slots, or the loop's non-rest entries. */
+function sessionsPerWeek(S, p) {
+  const have = new Set((S?.routines || []).map(r => r.id))
+  const slots = p.sequence ? p.sequence : Object.values(p.days || {}).flat()
+  return slots.filter(id => id !== REST && have.has(id)).length
+}
+
+/** The programme's sessions done in this run: the ones before a pause (Run.done) and the workouts since startedOn. */
+function sessionsDone(S, p, run, until = null) {
+  const ids = new Set(programmeRoutineIds(S, p))
+  const inRun = w => String(w?.d || '') >= run.startedOn && (!until || String(w.d) < until)
+  const logged = (Array.isArray(S?.workouts) ? S.workouts : []).filter(inRun)
+    .reduce((n, w) => n + routineIdsOf(w).filter(id => ids.has(id)).length, 0)
+  return Math.max(0, Math.round(Number(run.done) || 0)) + logged
+}
+
+/** The week (1-based) and the day of that week the next session is, for a programme that moves by sessions. */
+function sessionWeek(S, p, run) {
+  const perWeek = sessionsPerWeek(S, p)
+  if (!perWeek) return { week: 1, day: 1 }
+  const n = sessionsDone(S, p, run, isISO(run.pausedOn) ? run.pausedOn : null)
+  return { week: Math.floor(n / perWeek) + 1, day: (n % perWeek) + 1 }
+}
+
 /**
  * Where the running programme stands on `today`: `{ programme, run, week (1-based), weeks, paused,
  * done, current (the Week, or null once done) }`. Null with no programme running, or one whose
@@ -245,11 +282,12 @@ export function programmeStatus(S, today = todayISO()) {
   if (!p) return null
   const ws = wsOf(S)
   const at = isISO(run.pausedOn) && run.pausedOn < today ? run.pausedOn : today
-  const week = Math.max(1, weeksBetween(run.startedOn, at, ws) + 1)
+  const bySession = isLibraryProgramme(p) ? sessionWeek(S, p, run) : null
+  const week = bySession ? bySession.week : Math.max(1, weeksBetween(run.startedOn, at, ws) + 1)
   const weeks = p.weeks.length
   const done = week > weeks
   return {
-    programme: p, run, week: Math.min(week, weeks), weeks, done,
+    programme: p, run, week: Math.min(week, weeks), weeks, done, ...(bySession && !done ? { day: bySession.day } : {}),
     paused: isISO(run.pausedOn), cycle: Math.max(1, Math.round(Number(run.cycle) || 1)),
     current: done || isISO(run.pausedOn) ? null : p.weeks[week - 1],
   }
@@ -306,10 +344,19 @@ export function pauseProgramme(s, today = todayISO()) {
   s.programme = { ...s.programme, pausedOn: today }
 }
 
-/** Resumes where it was paused: the start moves on by the whole weeks the pause lasted. */
+/**
+ * Resumes where it was paused: the start moves on by the whole weeks the pause lasted. A
+ * programme that moves by sessions starts again today with the sessions done before the pause.
+ */
 export function resumeProgramme(s, today = todayISO()) {
   const run = s.programme
   if (!isMap(run) || !isISO(run.pausedOn)) return
+  const p = programmeById(s, run.id)
+  if (p && isLibraryProgramme(p)) {
+    const { pausedOn, ...rest } = run
+    s.programme = { ...rest, startedOn: today, done: sessionsDone(s, p, run, pausedOn) }
+    return
+  }
   const gap = Math.max(0, weeksBetween(run.pausedOn, today, wsOf(s)))
   const { pausedOn, ...rest } = run
   s.programme = { ...rest, startedOn: addDays(run.startedOn, gap * 7) }
@@ -342,16 +389,17 @@ export function repeatProgramme(s, today = todayISO(), bump = 0, now = Date.now(
   // Its schedule is already in place: keep the plan from before the first round in `saved`.
   s.programme = { ...run, startedOn: today, ...next }
   delete s.programme.pausedOn
+  delete s.programme.done
   return true
 }
 
-/** "Week 2 of 6", "Push block, paused", "Programme done": the running programme in a few words, or null. */
+/** "Week 2 of 6", "Week 2 of 6, day 3", "Push block, paused", "Programme done": the running programme in a few words, or null. */
 export function programmeChip(S, today = todayISO()) {
   const st = programmeStatus(S, today)
   if (!st) return null
   if (st.done) return t('Programme done')
   if (st.paused) return t('{0}, paused', st.programme.name || t('Programme'))
-  return t('Week {0} of {1}', st.week, st.weeks)
+  return st.day ? t('Week {0} of {1}, day {2}', st.week, st.weeks, st.day) : t('Week {0} of {1}', st.week, st.weeks)
 }
 
 /* ------------------------------- targets for a session ------------------------------- */
@@ -369,12 +417,15 @@ export function programmeSlot(S, rid, exId, iso = todayISO(), dayTarget = null) 
   const own = dayTarget || w.t?.[`${rid}:${exId}`] || w.t?.[exId] || {}
   const pct = own.pct != null ? own.pct : null
   const rpe = own.rpe != null ? own.rpe : w.rpe != null ? w.rpe : null
+  const rpes = Array.isArray(own.rpes) ? own.rpes : null
   const deload = w.deload === true
   if (pct == null && rpe == null && !deload) return null
   const bump = Number(S.programme?.bump) || 0
   return {
     ...(pct != null ? { pct: Math.min(PCT_MAX, pct + bump) } : {}),
     ...(rpe != null ? { rpe } : {}),
+    ...(rpes ? { rpes } : {}),
+    ...(isLibraryProgramme(st.programme) ? { rpeLoad: true } : {}),
     deload, week: st.week, weeks: st.weeks, name: st.programme.name, bump,
   }
 }
@@ -405,9 +456,13 @@ export function programmeExercises(S, r, iso = todayISO()) {
     const own = Object.fromEntries(Object.entries(base).filter(([k]) => !PRESCRIPTION_KEYS.includes(k)))
     const { wk, ...prescription } = item
     const out = { ...own, ...prescription, ...(wk ? { wk } : {}) }
+    const step = base.inc > 0 ? base.inc : defaultIncrement(item.id, S?.unit)
+    const rpes = wk?.rpes || (wk?.rpe != null && prescription.pyramid ? prescription.pyramid.map(() => wk.rpe) : null)
     if (wk?.pcts && prescription.pyramid) {
-      const step = base.inc > 0 ? base.inc : defaultIncrement(item.id, S?.unit)
       const weights = wk.pcts.map(p => pctWeight(S, item.id, p, { step }))
+      if (weights.every(w => w > 0)) out.pyramidWeight = weights
+    } else if (rpes && prescription.pyramid && isLibraryProgramme(programmeStatus(S, iso)?.programme)) {
+      const weights = prescription.pyramid.map((reps, i) => rpeWeight(S, item.id, reps, rpes[i], { step }))
       if (weights.every(w => w > 0)) out.pyramidWeight = weights
     }
     return out
@@ -432,6 +487,16 @@ export function pctWeight(S, exId, pct, { step = 2.5, owned = null, floor = 0 } 
     w = step > 0 ? round1(Math.round(ideal / step) * step) : round1(ideal)
   }
   return Math.max(w, floor || 0)
+}
+
+/**
+ * The weight for `reps` reps at RPE `rpe`: the %1RM the RPE chart gives for those reps plus the
+ * reps left in reserve, of the best estimated 1RM (pctWeight). Null without an estimate, or past
+ * the chart (more than 15 reps to failure).
+ */
+export function rpeWeight(S, exId, reps, rpe, opts) {
+  const pct = reps > 0 && rpe != null ? pctOfMax(reps + 10 - rpe) : null
+  return pct == null ? null : pctWeight(S, exId, pct, opts)
 }
 
 /** The RPE as the profile logs effort: "RPE 8", or "RIR 2" for a profile that logs reps in reserve. */

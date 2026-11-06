@@ -1720,6 +1720,7 @@ export const PT_BR_OVERRIDES = {
   'Your routines as a block of weeks, with starter programmes to try.': 'Suas rotinas como um bloco de semanas, com programas iniciais para experimentar.',
   'aim for {0}': 'mire em {0}',
   'Week {0} of {1}: {2}% of your best 1RM': 'Semana {0} de {1}: {2}% do seu melhor 1RM',
+  'Week {0} of {1}: weight from your best 1RM': 'Semana {0} de {1}: peso a partir do seu melhor 1RM',
   // --- seasonal themes (lib/seasonal.js) ---
   'A cobweb in the header, bats behind the rest timer, pumpkins on the finish screen. Never on your sets.': 'Uma teia de aranha no cabeçalho, morcegos atrás do cronômetro de descanso, abóboras no fim. Nunca em cima das suas séries.',
   'A pumpkin orange accent while Halloween shows. Your own color comes back after.': 'Um destaque laranja abóbora enquanto durar o Halloween. Depois sua cor volta.',
