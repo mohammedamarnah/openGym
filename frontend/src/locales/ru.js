@@ -680,6 +680,7 @@ export default {
   '{0} routines imported': { one: 'Импортирована {0} программа', few: 'Импортировано {0} программы', many: 'Импортировано {0} программ', other: 'Импортировано {0} программы' },
   'Fetching routines… ({0}/{1})': 'Загрузка программ… ({0}/{1})',
   'Routines': 'Программы',
+  'Programs': 'Готовые программы',
   'Import weigh-ins': 'Импортировать взвешивания',
   '{0} new · {1} days already here': '{0} новых · {1} дней уже есть',
   'Hevy stores weights in kg, so they’ll be converted to {0}.': 'Hevy хранит веса в кг, поэтому они будут переведены в {0}.',

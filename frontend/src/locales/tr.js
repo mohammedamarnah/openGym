@@ -690,6 +690,7 @@ export default {
   '{0} routines imported': '{0} rutin içe aktarıldı',
   'Fetching routines… ({0}/{1})': 'Rutinler getiriliyor… ({0}/{1})',
   'Routines': 'Rutinler',
+  'Programs': 'Programlar',
   'Import weigh-ins': 'Tartımları içe aktar',
   '{0} new · {1} days already here': '{0} yeni · {1} gün zaten var',
   'Hevy stores weights in kg, so they’ll be converted to {0}.': 'Hevy ağırlıkları kg olarak saklar, bu yüzden {0} birimine çevrilecek.',

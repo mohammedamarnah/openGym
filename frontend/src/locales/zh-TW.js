@@ -682,6 +682,7 @@ export default {
   '{0} routines imported': '已成功匯入 {0} 份訓練課表',
   'Fetching routines… ({0}/{1})': '正在擷取課表… ({0}/{1})',
   'Routines': '訓練課表',
+  'Programs': '現成計畫',
   'Import weigh-ins': '匯入體重',
   '{0} new · {1} days already here': '新增 {0} 筆 · 其中 {1} 天已有紀錄',
   'Hevy stores weights in kg, so they’ll be converted to {0}.': 'Hevy 以公斤儲存重量，所以會換算為 {0}。',

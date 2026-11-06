@@ -272,6 +272,7 @@ export default {
   'Your weekly routine': 'A heti rutinod',
   'Week schedule': 'Heti beosztás',
   'Routines': 'Rutinok',
+  'Programs': 'Programok',
   'No routines yet.': 'Még nincs rutin.',
   'Make one, or grab the starter plan to get going.': 'Hozz létre egyet, vagy kapd elő a kezdő tervet az induláshoz.',
   // --- routine edit ---

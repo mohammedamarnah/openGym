@@ -776,6 +776,7 @@ export default {
   '{0} routines imported': '{0}টি রুটিন ইমপোর্ট হয়েছে',
   'Fetching routines… ({0}/{1})': 'রুটিন আনা হচ্ছে… ({0}/{1})',
   'Routines': 'রুটিন',
+  'Programs': 'প্রোগ্রাম',
   'Import weigh-ins': 'ওজন মাপা ইমপোর্ট করুন',
   '{0} new · {1} days already here': '{0}টি নতুন · {1} দিন ইতিমধ্যে আছে',
   'Hevy stores weights in kg, so they’ll be converted to {0}.': 'Hevy ওজন kg-তে রাখে, তাই সেগুলো {0}-এ রূপান্তর করা হবে।',

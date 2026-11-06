@@ -690,6 +690,7 @@ export default {
   '{0} routines imported': '{0} रूटीन आयात किए गए',
   'Fetching routines… ({0}/{1})': 'रूटीन लाए जा रहे हैं… ({0}/{1})',
   'Routines': 'रूटीन',
+  'Programs': 'प्रोग्राम',
   'Import weigh-ins': 'वज़न आयात करें',
   '{0} new · {1} days already here': '{0} नए · {1} दिन पहले से मौजूद',
   'Hevy stores weights in kg, so they’ll be converted to {0}.': 'Hevy वज़न kg में रखता है, इसलिए उन्हें {0} में बदला जाएगा।',

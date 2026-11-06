@@ -712,6 +712,7 @@ export default {
   '{0} routines imported': '{0} rutiner importerade',
   'Fetching routines… ({0}/{1})': 'Hämtar rutiner… ({0}/{1})',
   'Routines': 'Rutiner',
+  'Programs': 'Program',
   'Hevy stores weights in kg, so they’ll be converted to {0}.': 'Hevy sparar vikter i kg, så de räknas om till {0}.',
   // --- mobile build ---
   'Your data': 'Din data',

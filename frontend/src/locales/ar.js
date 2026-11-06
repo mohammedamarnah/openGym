@@ -252,6 +252,7 @@ export default {
   'Your weekly routine': 'روتينك الأسبوعي',
   'Week schedule': 'جدول الأسبوع',
   'Routines': 'الروتينات',
+  'Programs': 'البرامج',
   'No routines yet.': 'لا توجد روتينات بعد.',
   'Make one, or grab the starter plan to get going.': 'أنشئ واحدًا، أو خذ خطة البداية لتنطلق.',
   'Superset with exercise above': 'سوبر سِت مع التمرين أعلاه',

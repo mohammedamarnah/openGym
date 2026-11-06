@@ -690,6 +690,7 @@ export default {
   '{0} routines imported': '루틴 {0}개 가져옴',
   'Fetching routines… ({0}/{1})': '루틴 가져오는 중… ({0}/{1})',
   'Routines': '루틴',
+  'Programs': '프로그램',
   'Import weigh-ins': '체중 가져오기',
   '{0} new · {1} days already here': '새 {0}개 · 이미 있는 날 {1}개',
   'Hevy stores weights in kg, so they’ll be converted to {0}.': 'Hevy는 무게를 kg로 저장하므로 {0}(으)로 변환됩니다.',

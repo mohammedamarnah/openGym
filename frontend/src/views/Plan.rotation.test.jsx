@@ -353,6 +353,17 @@ describe('Plan — Schedule extras', () => {
     expect(host.querySelector('.plan-mode')).toBeTruthy()
   })
 
+  it('has a third Programs tab that is remembered too', () => {
+    mount()
+    const seg = label => [...host.querySelectorAll('.plan-views button')].find(b => b.textContent === label)
+    expect([...host.querySelectorAll('.plan-views button')].map(b => b.textContent)).toEqual(['Schedule', 'Routines', 'Programs'])
+    click(seg('Programs'))
+    expect(localStorage.getItem('gym_plan_view')).toBe('programs')
+    expect(host.querySelector('.plan-mode')).toBe(null)
+    expect(host.querySelector('.plan-routines')).toBe(null)
+    expect(seg('Programs').className).toContain('on')
+  })
+
   it('one Plan menu holds share, print, import, the starter plans and the programmes', () => {
     mount()
     click(byLabel('Plan options'))

@@ -690,6 +690,7 @@ export default {
   '{0} routines imported': '{0} routine importate',
   'Fetching routines… ({0}/{1})': 'Download routine… ({0}/{1})',
   'Routines': 'Routine',
+  'Programs': 'Programmi',
   'Import weigh-ins': 'Importa pesate',
   '{0} new · {1} days already here': '{0} nuovi · {1} giorni già presenti',
   'Hevy stores weights in kg, so they’ll be converted to {0}.': 'Hevy memorizza i pesi in kg, quindi verranno convertiti in {0}.',

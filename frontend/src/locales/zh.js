@@ -690,6 +690,7 @@ export default {
   '{0} routines imported': '已导入 {0} 个训练计划',
   'Fetching routines… ({0}/{1})': '正在获取计划… ({0}/{1})',
   'Routines': '训练计划',
+  'Programs': '现成计划',
   'Import weigh-ins': '导入体重',
   '{0} new · {1} days already here': '{0} 条新记录 · {1} 天已有数据',
   'Hevy stores weights in kg, so they’ll be converted to {0}.': 'Hevy 以公斤存储重量，所以会换算为 {0}。',

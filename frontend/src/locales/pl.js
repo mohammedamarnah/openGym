@@ -690,6 +690,7 @@ export default {
   '{0} routines imported': { one: 'Zaimportowano {0} plan treningowy', few: 'Zaimportowano {0} plany treningowe', many: 'Zaimportowano {0} planów treningowych', other: 'Zaimportowano {0} planu treningowego' },
   'Fetching routines… ({0}/{1})': 'Pobieranie planów treningowych… ({0}/{1})',
   'Routines': 'Plany treningowe',
+  'Programs': 'Programy',
   'Import weigh-ins': 'Importuj ważenia',
   '{0} new · {1} days already here': 'nowe: {0} · dni już zapisane: {1}',
   'Hevy stores weights in kg, so they’ll be converted to {0}.': 'Hevy zapisuje ciężary w kg, więc zostaną przeliczone na {0}.',

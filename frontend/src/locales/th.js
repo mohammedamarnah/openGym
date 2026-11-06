@@ -272,6 +272,7 @@ export default {
   'Your weekly routine': 'รูทีนรายสัปดาห์ของคุณ',
   'Week schedule': 'ตารางรายสัปดาห์',
   'Routines': 'รูทีน',
+  'Programs': 'โปรแกรม',
   'No routines yet.': 'ยังไม่มีรูทีน',
   'Make one, or grab the starter plan to get going.': 'สร้างใหม่ หรือหยิบแผนเริ่มต้นไปใช้ก่อนก็ได้',
   // --- routine edit ---

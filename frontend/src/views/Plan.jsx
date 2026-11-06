@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { lazy, Suspense, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useStore } from '../store/useStore.js'
 import { useUI } from '../store/useUI.js'
@@ -36,8 +36,13 @@ import { isOn } from '../lib/modules.js'
 // train). The last one you looked at comes back: a per-device convenience, never synced, so it
 // lives in this browser's storage and not in S.
 export const PLAN_VIEW_KEY = 'gym_plan_view'
+// The program library pulls in its own chunk only when the Programs tab opens.
+const ProgramBrowser = lazy(() => import('./ProgramLibrary.jsx').then(m => ({ default: m.ProgramBrowser })))
 const readView = () => {
-  try { return localStorage.getItem(PLAN_VIEW_KEY) === 'routines' ? 'routines' : 'schedule' } catch { return 'schedule' }
+  try {
+    const v = localStorage.getItem(PLAN_VIEW_KEY)
+    return v === 'routines' || v === 'programs' ? v : 'schedule'
+  } catch { return 'schedule' }
 }
 
 /* Undo for Plan's two removals (v1.3.11). Both go through the store's normal update, so sync
@@ -184,13 +189,15 @@ export default function Plan() {
     </div>
     <input ref={fileRef} type="file" accept="application/json,.json" onChange={pickFile} hidden />
     <Segmented className="plan-views" tour="plan-views" value={view} onChange={setView}
-      options={[{ value: 'schedule', label: t('Schedule') }, { value: 'routines', label: t('Routines') }]} />
+      options={[{ value: 'schedule', label: t('Schedule') }, { value: 'routines', label: t('Routines') }, { value: 'programs', label: t('Programs') }]} />
     {progChip && <button type="button" className="prog-strip" onClick={() => nav('/plan/programmes')}>
       <Icon name="calendar" /><span className="grow">{S.programmes?.[S.programme?.id]?.name || t('Programme')}</span><span className="tag acc">{progChip}</span>
     </button>}
-    {view === 'routines'
-      ? <Routines S={S} update={update} nav={nav} />
-      : <Schedule S={S} update={update} nav={nav} mode={mode} />}
+    {view === 'programs'
+      ? <Suspense fallback={<div className="empty">{t('Loading…')}</div>}><ProgramBrowser /></Suspense>
+      : view === 'routines'
+        ? <Routines S={S} update={update} nav={nav} />
+        : <Schedule S={S} update={update} nav={nav} mode={mode} />}
   </div>
 }
 

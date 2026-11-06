@@ -518,6 +518,7 @@ export default {
   '{0} routines imported': { one: 'Імпортовано {0} програму', few: 'Імпортовано {0} програми', many: 'Імпортовано {0} програм', other: 'Імпортовано {0} програми' },
   'Fetching routines… ({0}/{1})': 'Завантаження програм… ({0}/{1})',
   'Routines': 'Програми',
+  'Programs': 'Готові програми',
   'Import weigh-ins': 'Імпортувати зважування',
   '{0} new · {1} days already here': '{0} нових · {1} днів уже є',
   'Hevy stores weights in kg, so they’ll be converted to {0}.': 'Hevy зберігає вагу в кг, тож її буде переведено в {0}.',

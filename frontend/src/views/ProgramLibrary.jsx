@@ -1,4 +1,4 @@
-// Plan → Programmes → Program library: published programs (lib/program-library.js) to browse,
+// Plan → Programs tab (and Plan → Programmes → Browse programs): published programs (lib/program-library.js) to browse,
 // fit to your equipment, swap exercises in, and add as routines and a programme.
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -14,7 +14,9 @@ import {
   LIBRARY_LEVELS,
 } from '../lib/program-library.js'
 import { exercisePicker } from '../sheets.jsx'
+import { looksLikeHtml, parseRichText, richTextLength } from '../lib/rich-text.js'
 import Icon from '../components/Icon.jsx'
+import RichText from '../components/RichText.jsx'
 import { Button, SearchField, Section } from '../components/ui.jsx'
 
 let indexLoad = null
@@ -61,6 +63,15 @@ function programLine(p) {
 
 export default function ProgramLibrary() {
   const nav = useNavigate()
+  return <div className="narrow">
+    <Header title={t('Program library')} back="/plan/programmes" nav={nav} />
+    <ProgramBrowser />
+  </div>
+}
+
+/** The library list with its filters, no page header: Plan's Programs tab shows it in place. */
+export function ProgramBrowser() {
+  const nav = useNavigate()
   const [rows, setRows] = useState(null)
   const [error, setError] = useState(false)
   const [f, setF] = useState({ sort: 'popular' })
@@ -72,8 +83,8 @@ export default function ProgramLibrary() {
   const goals = useMemo(() => (rows ? libraryValues(rows, 'goals').slice(0, 8) : []), [rows])
   const equipment = useMemo(() => (rows ? libraryValues(rows, 'equipment').slice(0, 6) : []), [rows])
 
-  return <div className="narrow">
-    <Header title={t('Program library')} sub={rows ? t('Programs: {0}', fmtNum(rows.length)) : null} back="/plan/programmes" nav={nav} />
+  return <div className="plan-programs">
+    {rows && <div className="small dim" style={{ margin: '0 2px 8px' }}>{t('Programs: {0}', fmtNum(rows.length))}</div>}
     {error && <div className="empty">{t('The program library is not on this server. Run scripts/boostcamp/fetch.mjs and rebuild.')}</div>}
     {!rows && !error && <div className="empty">{t('Loading…')}</div>}
     {rows && <>
@@ -175,9 +186,9 @@ export function ProgramDetail() {
   const days = weekdays || (v ? defaultWeekdays(v) : [])
   const order = weekOrder(weekStartOf(S))
 
-  if (error) return <div className="narrow"><Header title={t('Program')} back="/plan/library" nav={nav} />
+  if (error) return <div className="narrow"><Header title={t('Program')} back="/plan" nav={nav} />
     <div className="empty">{t('This program could not be loaded.')}</div></div>
-  if (!program || !v) return <div className="narrow"><Header title={t('Program')} back="/plan/library" nav={nav} />
+  if (!program || !v) return <div className="narrow"><Header title={t('Program')} back="/plan" nav={nav} />
     <div className="empty">{t('Loading…')}</div></div>
 
   const idName = name => (resolved[name]?.id ? exerciseNameText(exOr(resolved[name].id)) : name)
@@ -204,11 +215,15 @@ export function ProgramDetail() {
   }
 
   const desc = program.desc || ''
+  const rich = looksLikeHtml(desc) ? parseRichText(desc) : null
+  const descLen = rich ? richTextLength(rich) : desc.length
   return <div className="narrow">
-    <Header title={program.title} sub={[program.author, program.src === 'coach' ? t('Coach program') : t('Community program')].filter(Boolean).join(' · ')} back="/plan/library" nav={nav} />
+    <Header title={program.title} sub={[program.author, program.src === 'coach' ? t('Coach program') : t('Community program')].filter(Boolean).join(' · ')} back="/plan" nav={nav} />
     {desc && <div className="card" style={{ marginBottom: 12 }}>
-      <div className="small" style={{ whiteSpace: 'pre-wrap' }}>{fullDesc || desc.length < 400 ? desc : desc.slice(0, 400) + '…'}</div>
-      {desc.length >= 400 && <Button size="sm" variant="plain" onClick={() => setFullDesc(x => !x)}>{fullDesc ? t('Show less') : t('Show more')}</Button>}
+      {rich
+        ? <RichText nodes={rich} className={'small' + (fullDesc || descLen < 400 ? '' : ' clipped')} />
+        : <div className="small" style={{ whiteSpace: 'pre-wrap' }}>{fullDesc || desc.length < 400 ? desc : desc.slice(0, 400) + '…'}</div>}
+      {descLen >= 400 && <Button size="sm" variant="plain" onClick={() => setFullDesc(x => !x)}>{fullDesc ? t('Show less') : t('Show more')}</Button>}
       {program.url && <div className="small dim" style={{ marginTop: 6 }}><a href={program.url} target="_blank" rel="noreferrer">{t('Open on Boostcamp')}</a></div>}
     </div>}
 

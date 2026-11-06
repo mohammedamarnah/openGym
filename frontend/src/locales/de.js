@@ -711,6 +711,7 @@ export default {
   '{0} routines imported': '{0} Routinen importiert',
   'Fetching routines… ({0}/{1})': 'Routinen werden geladen… ({0}/{1})',
   'Routines': 'Routinen',
+  'Programs': 'Programme',
   'Hevy stores weights in kg, so they’ll be converted to {0}.': 'Hevy speichert Gewichte in kg, sie werden also nach {0} umgerechnet.',
   // --- mobile build ---
   'Your data': 'Deine Daten',
