@@ -2442,6 +2442,15 @@ export const PT_BR_OVERRIDES = {
   "Your watch stops getting workouts while Watch is off. It stays paired.": "Seu relógio para de receber treinos enquanto “Relógio” estiver desligado. Continua pareado.",
   "Your webhooks stop sending while Integrations is off. They stay set up.": "Seus webhooks param de enviar enquanto “Integrações” estiver desligado. Continuam configurados.",
   "{0} stops syncing while Health is off. Nothing is disconnected, and it catches up once Health is back.": "{0} para de sincronizar enquanto “Saúde” estiver desligado. Nada fica desconectado, e ele se atualiza quando “Saúde” voltar.",
+  "A swap applies to every week of the program.": "Uma troca vale para todas as semanas do programa.",
+  "More than seven days: the days run as a loop.": "Mais de sete dias: os dias rodam em ciclo.",
+  "No program matches. Try fewer filters.": "Nenhum programa corresponde. Tente menos filtros.",
+  "Rest or not planned this week": "Descanso ou nada planejado nesta semana",
+  "The program library is not on this server. Run scripts/boostcamp/fetch.mjs and rebuild.": "A biblioteca de programas não está neste servidor. Execute scripts/boostcamp/fetch.mjs e compile de novo.",
+  "Thousands of published programs, week by week. Swap any exercise before you add one.": "Milhares de programas publicados, semana a semana. Troque qualquer exercício antes de adicionar um.",
+  "Two days are on the same weekday.": "Dois dias caem no mesmo dia da semana.",
+  "yours": "seu",
+  "{0} joined": "{0} entraram",
 }
 
 export default { ...pt, ...PT_BR_OVERRIDES }
