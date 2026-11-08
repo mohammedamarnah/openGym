@@ -11,7 +11,7 @@ const ALIAS = { b: 'strong', i: 'em', h1: 'h2', h5: 'h4', h6: 'h4', div: 'p' }
 const VOID = new Set(['br', 'img', 'hr', 'input', 'meta', 'link', 'wbr', 'source'])
 const DROP = new Set(['script', 'style', 'iframe', 'object', 'template'])
 
-const NAMED = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', ndash: '–', mdash: '—', hellip: '…', rsquo: '’', lsquo: '‘', rdquo: '”', ldquo: '“' }
+const NAMED = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', ndash: '–', mdash: '\u2014', hellip: '…', rsquo: '’', lsquo: '‘', rdquo: '”', ldquo: '“' }
 
 export function decodeEntities(s) {
   return s.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, e) => {
