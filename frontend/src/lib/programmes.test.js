@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeAll, afterAll, afterEach } from 'vitest
 import {
   normalizeProgramme, programmesOf, newProgramme, saveProgramme, deleteProgramme, resizeWeeks, stepWeek,
   programmeStatus, startProgramme, pauseProgramme, resumeProgramme, endProgramme, repeatProgramme,
-  programmeSlot, pctWeight, importedProgramme, bundleProgramme, programmeRoutineIds, MAX_WEEKS, rpeAs, cleanWeek,
+  programmeSlot, pctWeight, importedProgramme, replaceProgrammeExercise, bundleProgramme, programmeRoutineIds, MAX_WEEKS, rpeAs, cleanWeek,
   IMPORT_MAX_SEQUENCE, IMPORT_MAX_TARGETS, IMPORT_MAX_PROGRAMMES,
 } from './programmes.js'
 import { buildSessionEntries } from './session-start.js'
@@ -343,6 +343,22 @@ describe('a week with its own exercise list (Week.r)', () => {
     ] }))
     return s
   }
+
+  it('a replace in the routine replaces the exercise in every week', () => {
+    const s = weekly()
+    s.routines[0].ex[0].id = SQUAT
+    replaceProgrammeExercise(s, 'A', BENCH, SQUAT)
+    startProgramme(s, 'P', '2026-10-21')
+    expect(buildSessionEntries(s, s.routines[0]).map(e => e.id)).toEqual([SQUAT])
+    expect(s.programmes.P.weeks[1].r.A.map(x => x.id)).toEqual([SQUAT, SQUAT])
+  })
+
+  it('an exercise replaced in the routine before the programme followed replaces is still trained', () => {
+    const s = weekly()
+    s.routines[0].ex = [{ id: '0289', sets: 3, reps: 5, weight: 30 }]
+    startProgramme(s, 'P', '2026-10-21')
+    expect(buildSessionEntries(s, s.routines[0]).map(e => e.id)).toEqual(['0289'])
+  })
 
   it('trains each week at its own sets and reps, keeping the routine\'s settings', () => {
     const s = weekly()

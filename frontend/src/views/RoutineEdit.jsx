@@ -18,6 +18,7 @@ import { shareRoutineSheet } from '../components/RoutineShare.jsx'
 import SwipeRow from '../components/SwipeRow.jsx'
 import { workoutControls } from '../lib/workout-controls.js'
 import { copyRoutine, deleteRoutine, replaceSlotExercise } from '../lib/routines.js'
+import { replaceProgrammeExercise } from '../lib/programmes.js'
 import { markEntryUndone } from '../lib/sync-merge.js'
 import { speedUnitOf } from '../lib/speed.js'
 import { POLICIES_FOR, POLICY_NAME, POLICY_DESC, profileRule } from '../lib/progression.js'
@@ -401,7 +402,13 @@ export default function RoutineEdit() {
     const commit = (ex, fn) => {
       picker.close()
       let done = false
-      edit(x => { if (x[i] && x[i].id === openedOn) { x[i] = fn(x[i]); done = true } })
+      update(s => {
+        const x = s.routines.find(rt => rt.id === id).ex
+        if (!x[i] || x[i].id !== openedOn) return
+        x[i] = fn(x[i])
+        if (!x.some(e => e.id === openedOn)) replaceProgrammeExercise(s, id, openedOn, x[i].id)
+        done = true
+      })
       if (done) toast(t('Replaced with “{0}”', exerciseNameText(ex)))
     }
     const picker = exercisePicker((ex, quick) => {

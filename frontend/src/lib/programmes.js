@@ -436,7 +436,49 @@ export function programmeDayPlan(S, rid, iso = todayISO()) {
   if (!st || !st.current || !rid) return null
   if (!programmeRoutineIds(S, st.programme).includes(rid)) return null
   const items = st.current.r?.[rid]
-  return Array.isArray(items) && items.length ? items : null
+  if (!Array.isArray(items) || !items.length) return null
+  const swaps = replacedInRoutine(st.programme, (S.routines || []).find(r => r.id === rid))
+  return swaps.size ? items.map(x => (swaps.has(x.id) ? { ...x, id: swaps.get(x.id) } : x)) : items
+}
+
+/**
+ * The exercises you replaced in a routine before a replace also changed its programme: the slots
+ * where the routine and the programme's first list for it differ, each exercise found in only one
+ * of the two. A slot added, removed or moved has its exercise in both or in neither.
+ */
+function replacedInRoutine(p, routine) {
+  const first = p.weeks.find(w => Array.isArray(w.r?.[routine?.id]))?.r[routine.id] || []
+  const mine = (routine?.ex || []).map(e => e.id)
+  const theirs = first.map(x => x.id)
+  const swaps = new Map()
+  theirs.forEach((id, i) => {
+    if (mine[i] && mine[i] !== id && !mine.includes(id) && !theirs.includes(mine[i])) swaps.set(id, mine[i])
+  })
+  return swaps
+}
+
+/** A replace in routine `rid` (RoutineEdit): every programme week trains `to` where it had `from`. */
+export function replaceProgrammeExercise(s, rid, from, to) {
+  if (!isMap(s.programmes) || !rid || !from || !to || from === to) return
+  for (const p of programmesOf(s)) {
+    let changed = false
+    const weeks = p.weeks.map(w => {
+      const items = w.r?.[rid]
+      const key = `${rid}:${from}`
+      const hasItem = Array.isArray(items) && items.some(x => x.id === from)
+      const hasTarget = !!w.t?.[key]
+      if (!hasItem && !hasTarget) return w
+      changed = true
+      const out = { ...w }
+      if (hasItem) out.r = { ...w.r, [rid]: items.map(x => (x.id === from ? { ...x, id: to } : x)) }
+      if (hasTarget) {
+        const { [key]: target, ...rest } = w.t
+        out.t = { ...rest, [`${rid}:${to}`]: target }
+      }
+      return out
+    })
+    if (changed) saveProgramme(s, { ...p, weeks })
+  }
 }
 
 const PRESCRIPTION_KEYS = ['sets', 'reps', 'repsMin', 'repsMax', 'setsMax', 'sec', 'mode', 'pyramid', 'pyramidRest',
